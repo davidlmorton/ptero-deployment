@@ -1,9 +1,161 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python
 
-source $PTERO_COMMON
-source $PTERO_DIR/deployment/libexec/common-ptero-deploy-deis
+import argparse
 
-verify_deis
-verify_jq
+from json import load
+from requests import get, post
 
-delegate_to_subcommand $@
+class DeisProxy(object):
+    def __init__(self, settings_path):
+        self.settings = self._read_settings(settings_path)
+
+    @staticmethod
+    def _read_settings(path):
+        with open(path) as ofile:
+            return load(ofile)
+
+    @property
+    def _app_names(self):
+        return self._get_setting('services').keys()
+
+    def _deis_get(self, endpoint):
+        return get(self._endpoint_url(endpoint), headers=self._auth_header)
+
+    def _deis_post(self, endpoint, data):
+        headers = self._auth_header
+        headers.update({'Content-Type': 'application/json'})
+        return post(self._endpoint_url(endpoint), json=data, headers=headers)
+
+    def _endpoint_url(self, endpoint):
+        return self._controller_url + endpoint
+
+    @property
+    def _controller_url(self):
+        return self._get_setting('deis', 'controller')
+
+    @property
+    def _auth_header(self):
+        return {'Authorization': 'token %s' % self._auth_token}
+
+    @property
+    def _auth_token(self):
+        return self._get_setting('deis', 'token')
+
+    def _get_setting(self, *args):
+        setting = self.settings.copy()
+        for arg in args:
+            setting = setting[arg]
+        return setting
+
+    def config_all(self, **kwargs):
+        for app_name in self._app_names:
+            self.config(app_name)
+
+    def config(self, app_name, **kwargs):
+        updates = self._config_updates(app_name)
+        if updates:
+            print 'About to update config for %s with:' % app_name
+            self._print_config(updates)
+
+            response = self._deis_post(self._config_endpoint(app_name),
+                    {'values': updates})
+            # TODO: we need to check the return value
+            response_body = response.json()
+            self._validate_deployed_config(app_name)
+        else:
+            print 'Nothing to update for %s' % app_name
+
+        print ''
+
+    def _validate_deployed_config(self, app_name):
+        updates = self._config_updates(app_name)
+        if updates:
+            raise RuntimeError('Failed to update config for %s' % app_name)
+        else:
+            print 'Current config for %s is now:' % app_name
+            self._print_config(self._get_proposed_config(app_name))
+
+    @staticmethod
+    def _print_config(d):
+        for key in sorted(d.keys()):
+            print '  %s=%s' % (key, d[key])
+
+    def _config_updates(self, app_name):
+        proposed = self._get_proposed_config(app_name)
+        deployed = self._get_deployed_config(app_name)
+
+        result = self._new_and_changed_config(proposed, deployed)
+        result.update(self._config_values_to_clear(proposed, deployed))
+        return result
+
+    def _get_proposed_config(self, app_name):
+        return self._get_setting('services', app_name, 'environment')
+
+    def _get_deployed_config(self, app_name):
+        response = self._deis_get(self._config_endpoint(app_name))
+        # TODO: we need to check the return value
+        response_body = response.json()
+        return response_body['values']
+
+    def _new_and_changed_config(self, proposed, deployed):
+        proposed_set = self._set_from_dict(proposed)
+        deployed_set = self._set_from_dict(deployed)
+        return dict(proposed_set - deployed_set)
+
+    @staticmethod
+    def _config_endpoint(app_name):
+        return '/v1/apps/%s/config/' % app_name
+
+    @staticmethod
+    def _config_values_to_clear(proposed, deployed):
+        keys = set(deployed.keys()) - set(proposed.keys())
+        return { key: None for key in keys }
+
+    @staticmethod
+    def _set_from_dict(d):
+        return set([(k, v) for k, v in d.iteritems()])
+
+    def scale(self, app_name, **kwargs):
+        pass
+
+    def scale_all(self, **kwargs):
+        pass
+
+    def stop(self, app_name, **kwargs):
+        pass
+
+    def stop_all(self, **kwargs):
+        pass
+
+def main():
+    parser = create_parser()
+    parsed_args = parser.parse_args()
+    deis_proxy = DeisProxy(parsed_args.config)
+    subcommand = parsed_args.subcommand
+    getattr(deis_proxy, subcommand.replace('-', '_'))(**vars(parsed_args))
+
+def create_parser():
+    parser = argparse.ArgumentParser(prog='ptero-deploy-deis')
+    parser.add_argument('--config', action='store', required=True, help='config help')
+    subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+
+    subparsers.add_parser('config-all', help='Update configuration for all apps')
+
+    config_parser = subparsers.add_parser('config', help='Update configuration for one app')
+    config_parser.add_argument('app_name', help='Name of app to configure')
+
+    subparsers.add_parser('scale-all', help='Scale all apps')
+
+    scale_parser = subparsers.add_parser('scale', help='Scale one app')
+    scale_parser.add_argument('app_name', help='Name of app to scale')
+
+    subparsers.add_parser('stop-all', help='Stop all apps')
+
+    stop_parser = subparsers.add_parser('stop', help='Stop one app')
+    stop_parser.add_argument('app_name', help='Name of app to stop')
+
+    return parser
+
+
+if __name__ == '__main__':
+    main()
