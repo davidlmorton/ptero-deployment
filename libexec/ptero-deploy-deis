@@ -56,16 +56,18 @@ class DeisProxy(object):
         if updates:
             print 'About to update config for %s with:' % app_name
             self._print_config(updates)
-
-            response = self._deis_post('/v1/apps/%s/config/' % app_name,
-                    {'values': updates})
-            # TODO: we need to check the return value
-            response_body = response.json()
+            self._deploy_config_updates(app_name, updates)
             self._validate_deployed_config(app_name)
         else:
             print 'Nothing to update for %s' % app_name
 
         print ''
+
+    def _deploy_config_updates(self, app_name, updates):
+        response = self._deis_post('/v1/apps/%s/config/' % app_name,
+                {'values': updates})
+        # TODO: we need to check the return value
+        response_body = response.json()
 
     def _validate_deployed_config(self, app_name):
         updates = self._config_updates(app_name)
