@@ -57,7 +57,7 @@ class DeisProxy(object):
             print 'About to update config for %s with:' % app_name
             self._print_config(updates)
 
-            response = self._deis_post(self._config_endpoint(app_name),
+            response = self._deis_post('/v1/apps/%s/config/' % app_name,
                     {'values': updates})
             # TODO: we need to check the return value
             response_body = response.json()
@@ -92,7 +92,7 @@ class DeisProxy(object):
         return self._get_setting('services', app_name, 'environment')
 
     def _get_deployed_config(self, app_name):
-        response = self._deis_get(self._config_endpoint(app_name))
+        response = self._deis_get('/v1/apps/%s/config/' % app_name)
         # TODO: we need to check the return value
         response_body = response.json()
         return response_body['values']
@@ -101,10 +101,6 @@ class DeisProxy(object):
         proposed_set = self._set_from_dict(proposed)
         deployed_set = self._set_from_dict(deployed)
         return dict(proposed_set - deployed_set)
-
-    @staticmethod
-    def _config_endpoint(app_name):
-        return '/v1/apps/%s/config/' % app_name
 
     @staticmethod
     def _config_values_to_clear(proposed, deployed):
