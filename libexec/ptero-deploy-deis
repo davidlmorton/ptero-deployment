@@ -59,7 +59,7 @@ class DeisProxy(object):
         proposed = self._proposed_config(app_name)
         deployed = self._deployed_config(app_name)
 
-        result = self._new_and_changed_config(proposed, deployed)
+        result = self._new_and_changed(proposed, deployed)
         result.update(self._config_values_to_clear(proposed, deployed))
         return result
 
@@ -72,7 +72,7 @@ class DeisProxy(object):
         response_body = response.json()
         return response_body['values']
 
-    def _new_and_changed_config(self, proposed, deployed):
+    def _new_and_changed(self, proposed, deployed):
         proposed_set = self._set_from_dict(proposed)
         deployed_set = self._set_from_dict(deployed)
         return dict(proposed_set - deployed_set)
