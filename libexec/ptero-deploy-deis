@@ -9,29 +9,9 @@ class DeisProxy(object):
     def __init__(self, settings_path):
         self.settings = self._read_settings(settings_path)
 
-    @staticmethod
-    def _read_settings(path):
-        with open(path) as ofile:
-            return load(ofile)
-
     @property
     def _app_names(self):
         return self._get_setting('services').keys()
-
-    def _deis_get(self, endpoint):
-        return get(self._endpoint_url(endpoint), headers=self._auth_header)
-
-    def _deis_post(self, endpoint, data):
-        headers = self._auth_header
-        headers.update({'Content-Type': 'application/json'})
-        return post(self._endpoint_url(endpoint), json=data, headers=headers)
-
-    def _endpoint_url(self, endpoint):
-        return self._controller_url + endpoint
-
-    @property
-    def _controller_url(self):
-        return self._get_setting('deis', 'controller')
 
     @property
     def _auth_header(self):
@@ -41,11 +21,9 @@ class DeisProxy(object):
     def _auth_token(self):
         return self._get_setting('deis', 'token')
 
-    def _get_setting(self, *args):
-        setting = self.settings.copy()
-        for arg in args:
-            setting = setting[arg]
-        return setting
+    @property
+    def _controller_url(self):
+        return self._get_setting('deis', 'controller')
 
     def config_all(self, **kwargs):
         for app_name in self._app_names:
@@ -77,11 +55,6 @@ class DeisProxy(object):
             print 'Current config for %s is now:' % app_name
             self._print_config(self._get_proposed_config(app_name))
 
-    @staticmethod
-    def _print_config(d):
-        for key in sorted(d.keys()):
-            print '  %s=%s' % (key, d[key])
-
     def _config_updates(self, app_name):
         proposed = self._get_proposed_config(app_name)
         deployed = self._get_deployed_config(app_name)
@@ -104,10 +77,37 @@ class DeisProxy(object):
         deployed_set = self._set_from_dict(deployed)
         return dict(proposed_set - deployed_set)
 
+    def _deis_get(self, endpoint):
+        return get(self._endpoint_url(endpoint), headers=self._auth_header)
+
+    def _deis_post(self, endpoint, data):
+        headers = self._auth_header
+        headers.update({'Content-Type': 'application/json'})
+        return post(self._endpoint_url(endpoint), json=data, headers=headers)
+
+    def _endpoint_url(self, endpoint):
+        return self._controller_url + endpoint
+
+    def _get_setting(self, *args):
+        setting = self.settings.copy()
+        for arg in args:
+            setting = setting[arg]
+        return setting
+
     @staticmethod
     def _config_values_to_clear(proposed, deployed):
         keys = set(deployed.keys()) - set(proposed.keys())
         return { key: None for key in keys }
+
+    @staticmethod
+    def _print_config(d):
+        for key in sorted(d.keys()):
+            print '  %s=%s' % (key, d[key])
+
+    @staticmethod
+    def _read_settings(path):
+        with open(path) as ofile:
+            return load(ofile)
 
     @staticmethod
     def _set_from_dict(d):
