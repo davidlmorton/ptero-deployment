@@ -53,20 +53,20 @@ class DeisProxy(object):
             raise RuntimeError('Failed to update config for %s' % app_name)
         else:
             print 'Current config for %s is now:' % app_name
-            self._print_config(self._get_proposed_config(app_name))
+            self._print_config(self._proposed_config(app_name))
 
     def _config_updates(self, app_name):
-        proposed = self._get_proposed_config(app_name)
-        deployed = self._get_deployed_config(app_name)
+        proposed = self._proposed_config(app_name)
+        deployed = self._deployed_config(app_name)
 
         result = self._new_and_changed_config(proposed, deployed)
         result.update(self._config_values_to_clear(proposed, deployed))
         return result
 
-    def _get_proposed_config(self, app_name):
+    def _proposed_config(self, app_name):
         return self._get_setting('services', app_name, 'environment')
 
-    def _get_deployed_config(self, app_name):
+    def _deployed_config(self, app_name):
         response = self._deis_get('/v1/apps/%s/config/' % app_name)
         # TODO: we need to check the return value
         response_body = response.json()
