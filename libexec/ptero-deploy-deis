@@ -3,6 +3,7 @@
 import argparse
 from json import load
 from requests import get, post
+from time import sleep
 
 class DeisProxy(object):
     def __init__(self, settings_path):
@@ -90,8 +91,27 @@ class DeisProxy(object):
 
         print ''
 
-    def _scale_updates(self, app_name):
-        proposed = self._proposed_scale(app_name)
+    def stop_all(self, **kwargs):
+        for app_name in self._app_names:
+            self.stop(app_name)
+
+    def stop(self, app_name, **kwargs):
+        updates = self._scale_updates(app_name, {})
+        if updates:
+            print 'Attempting to stop %s' % app_name
+            print 'About to update scale for %s with:' % app_name
+            print self._format_scale(updates)
+            self._deploy_scale_updates(app_name, updates)
+            sleep(5)
+            self._validate_deployed_scale(app_name)
+        else:
+            print '%s already stopped' % app_name
+
+        print ''
+
+    def _scale_updates(self, app_name, proposed=None):
+        if proposed == None:
+            proposed = self._proposed_scale(app_name)
         deployed = self._deployed_scale(app_name)
 
         result = self._new_and_changed(proposed, deployed)
@@ -124,13 +144,6 @@ class DeisProxy(object):
         else:
             print 'Current scale for %s is now:' % app_name
             print self._format_scale(self._proposed_scale(app_name))
-
-    def stop_all(self, **kwargs):
-        for app_name in self._app_names:
-            self.stop(app_name)
-
-    def stop(self, app_name, **kwargs):
-        pass
 
     def _deis_get(self, endpoint):
         response = get(self._endpoint_url(endpoint), headers=self._auth_header)
