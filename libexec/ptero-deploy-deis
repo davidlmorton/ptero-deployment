@@ -99,11 +99,18 @@ class DeisProxy(object):
         return result
 
     def _proposed_scale(self, app_name):
-        return self._get_setting('services', app_name, 'scale')
+        return self._dict_values_to_string(
+            self._get_setting('services', app_name, 'scale'))
 
     def _deployed_scale(self, app_name):
         response_body = self._deis_get('/v1/apps/%s/' % app_name)
-        return response_body['structure']
+        return self._dict_values_to_string( response_body['structure'] )
+
+    @staticmethod
+    def _dict_values_to_string(d):
+        for key in d:
+            d[key] = str(d[key])
+        return d
 
     def _deploy_scale_updates(self, app_name, updates):
         self._deis_post('/v1/apps/%s/scale/' % app_name, updates)
