@@ -41,10 +41,8 @@ class DeisProxy(object):
         print ''
 
     def _deploy_config_updates(self, app_name, updates):
-        response = self._deis_post('/v1/apps/%s/config/' % app_name,
+        self._deis_post('/v1/apps/%s/config/' % app_name,
                 {'values': updates})
-        # TODO: we need to check the return value
-        response_body = response.json()
 
     def _validate_deployed_config(self, app_name):
         updates = self._config_updates(app_name)
@@ -68,9 +66,7 @@ class DeisProxy(object):
         return self._get_setting('services', app_name, 'environment')
 
     def _deployed_config(self, app_name):
-        response = self._deis_get('/v1/apps/%s/config/' % app_name)
-        # TODO: we need to check the return value
-        response_body = response.json()
+        response_body = self._deis_get('/v1/apps/%s/config/' % app_name)
         return response_body['values']
 
     def _new_and_changed(self, proposed, deployed):
@@ -106,15 +102,11 @@ class DeisProxy(object):
         return self._get_setting('services', app_name, 'scale')
 
     def _deployed_scale(self, app_name):
-        response = self._deis_get('/v1/apps/%s/' % app_name)
-        # TODO: we need to check the return value
-        response_body = response.json()
+        response_body = self._deis_get('/v1/apps/%s/' % app_name)
         return response_body['structure']
 
     def _deploy_scale_updates(self, app_name, updates):
-        response = self._deis_post('/v1/apps/%s/scale/' % app_name, updates)
-        # TODO: we need to check the return value
-        response_body = response.json()
+        self._deis_post('/v1/apps/%s/scale/' % app_name, updates)
 
     def _validate_deployed_scale(self, app_name):
         updates = self._scale_updates(app_name)
@@ -134,12 +126,17 @@ class DeisProxy(object):
         pass
 
     def _deis_get(self, endpoint):
-        return get(self._endpoint_url(endpoint), headers=self._auth_header)
+        response = get(self._endpoint_url(endpoint), headers=self._auth_header)
+        response.raise_for_status()
+        return response.json()
 
     def _deis_post(self, endpoint, data):
         headers = self._auth_header
         headers.update({'Content-Type': 'application/json'})
-        return post(self._endpoint_url(endpoint), json=data, headers=headers)
+        response = post(self._endpoint_url(endpoint), json=data, headers=headers)
+        response.raise_for_status()
+        if response.encoding == 'application/json':
+            return response.json()
 
     def _endpoint_url(self, endpoint):
         return self._controller_url + endpoint
