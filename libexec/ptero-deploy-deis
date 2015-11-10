@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 
 source $PTERO_COMMON
-source $PTERO_DIR/deployment/libexec/common-ptero-deploy-deis
 
-verify_deis
 verify_jq
 
 delegate_to_subcommand $@
