@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-
-USAGE_MESSAGE="Usage: $0 DEPLOYMENT_CONFIG APP_NAME"
-DEPLOYMENT_CONFIG=${1?"$USAGE_MESSAGE"}
-APP_NAME=${2?"$USAGE_MESSAGE"}
-
-echo "Setting config for $APP_NAME."
-deis config:set -a $APP_NAME $(jq -r '.services.'"\"$APP_NAME\""'.environment|with_entries(.key = .key + "=" + .value)|keys|@sh' "${DEPLOYMENT_CONFIG}" | sed s/\'//g)

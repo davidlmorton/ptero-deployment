@@ -8,4 +8,4 @@ DEPLOYMENT_CONFIG=${1?"Usage: $0 DEPLOYMENT_CONFIG"}
 log "Scaling apps..."
 log
 
-"${PTERO_DIR}/ptero" deploy deis service-foreach $DEPLOYMENT_CONFIG "${PTERO_DIR}/ptero" deploy deis scale-service $DEPLOYMENT_CONFIG
+"${PTERO_DIR}/deployment/libexec/deploy-deis-proxy" --config "${DEPLOYMENT_CONFIG}" scale-all
