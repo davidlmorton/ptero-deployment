@@ -102,8 +102,8 @@ class DeisProxy(object):
             print 'About to update scale for %s with:' % app_name
             print self._format_scale(updates)
             self._deploy_scale_updates(app_name, updates)
-            sleep(5)
             self._validate_stopped(app_name)
+            print 'Success!'
         else:
             print '%s already stopped' % app_name
 
@@ -120,10 +120,7 @@ class DeisProxy(object):
     def _scale_updates_for_stop(self, app_name):
         proposed = self._dict_values_to_zero(self._deployed_scale(app_name))
         deployed = self._deployed_scale(app_name)
-
-        result = self._new_and_changed(proposed, deployed)
-        result.update(self._scale_values_to_zero(proposed, deployed))
-        return result
+        return self._new_and_changed(proposed, deployed)
 
     def _proposed_scale(self, app_name):
         return self._dict_values_to_string(
@@ -146,7 +143,9 @@ class DeisProxy(object):
         return d
 
     def _deploy_scale_updates(self, app_name, updates):
+        print 'About to post scale updates'
         self._deis_post('/v1/apps/%s/scale/' % app_name, updates)
+        print 'Scale updates posted'
 
     def _validate_stopped(self, app_name):
         updates = self._scale_updates_for_stop(app_name)
@@ -156,7 +155,7 @@ class DeisProxy(object):
                 'Failed to update scale for %s:\n%s' % (app_name, scale))
         else:
             print 'Current scale for %s is now:' % app_name
-            print self._format_scale(self._proposed_scale(app_name))
+            print self._format_scale(self._deployed_scale(app_name))
 
     def _validate_deployed_scale(self, app_name):
         updates = self._scale_updates(app_name)
@@ -166,7 +165,7 @@ class DeisProxy(object):
                 'Failed to update scale for %s:\n%s' % (app_name, scale))
         else:
             print 'Current scale for %s is now:' % app_name
-            print self._format_scale(self._proposed_scale(app_name))
+            print self._format_scale(self._deployed_scale(app_name))
 
     def _deis_get(self, endpoint):
         response = get(self._endpoint_url(endpoint), headers=self._auth_header)
