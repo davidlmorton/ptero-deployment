@@ -96,22 +96,29 @@ class DeisProxy(object):
             self.stop(app_name)
 
     def stop(self, app_name, **kwargs):
-        updates = self._scale_updates(app_name, {})
+        updates = self._scale_updates_for_stop(app_name)
         if updates:
             print 'Attempting to stop %s' % app_name
             print 'About to update scale for %s with:' % app_name
             print self._format_scale(updates)
             self._deploy_scale_updates(app_name, updates)
             sleep(5)
-            self._validate_deployed_scale(app_name)
+            self._validate_stopped(app_name)
         else:
             print '%s already stopped' % app_name
 
         print ''
 
-    def _scale_updates(self, app_name, proposed=None):
-        if proposed == None:
-            proposed = self._proposed_scale(app_name)
+    def _scale_updates(self, app_name):
+        proposed = self._proposed_scale(app_name)
+        deployed = self._deployed_scale(app_name)
+
+        result = self._new_and_changed(proposed, deployed)
+        result.update(self._scale_values_to_zero(proposed, deployed))
+        return result
+
+    def _scale_updates_for_stop(self, app_name):
+        proposed = self._dict_values_to_zero(self._deployed_scale(app_name))
         deployed = self._deployed_scale(app_name)
 
         result = self._new_and_changed(proposed, deployed)
@@ -127,6 +134,12 @@ class DeisProxy(object):
         return self._dict_values_to_string( response_body['structure'] )
 
     @staticmethod
+    def _dict_values_to_zero(d):
+        for key in d:
+            d[key] = "0"
+        return d
+
+    @staticmethod
     def _dict_values_to_string(d):
         for key in d:
             d[key] = str(d[key])
@@ -134,6 +147,16 @@ class DeisProxy(object):
 
     def _deploy_scale_updates(self, app_name, updates):
         self._deis_post('/v1/apps/%s/scale/' % app_name, updates)
+
+    def _validate_stopped(self, app_name):
+        updates = self._scale_updates_for_stop(app_name)
+        if updates:
+            scale = self._format_scale(updates)
+            raise RuntimeError(
+                'Failed to update scale for %s:\n%s' % (app_name, scale))
+        else:
+            print 'Current scale for %s is now:' % app_name
+            print self._format_scale(self._proposed_scale(app_name))
 
     def _validate_deployed_scale(self, app_name):
         updates = self._scale_updates(app_name)
