@@ -36,6 +36,7 @@ class DeisProxy(object):
             print self._format_config(updates)
             self._deploy_config_updates(app_name, updates)
             self._validate_deployed_config(app_name)
+            print 'Success!'
         else:
             print 'Nothing to update for %s' % app_name
 
@@ -51,9 +52,6 @@ class DeisProxy(object):
             config = self._format_config(updates)
             raise RuntimeError(
                 'Failed to update config for %s:\n%s' % (app_name, config))
-        else:
-            print 'Current config for %s is now:' % app_name
-            print self._format_config(self._proposed_config(app_name))
 
     def _config_updates(self, app_name):
         proposed = self._proposed_config(app_name)
@@ -86,6 +84,7 @@ class DeisProxy(object):
             print self._format_scale(updates)
             self._deploy_scale_updates(app_name, updates)
             self._validate_deployed_scale(app_name)
+            print 'Success!'
         else:
             print 'Nothing to update for %s' % app_name
 
@@ -153,9 +152,6 @@ class DeisProxy(object):
             scale = self._format_scale(updates)
             raise RuntimeError(
                 'Failed to update scale for %s:\n%s' % (app_name, scale))
-        else:
-            print 'Current scale for %s is now:' % app_name
-            print self._format_scale(self._deployed_scale(app_name))
 
     def _validate_deployed_scale(self, app_name):
         updates = self._scale_updates(app_name)
@@ -163,9 +159,6 @@ class DeisProxy(object):
             scale = self._format_scale(updates)
             raise RuntimeError(
                 'Failed to update scale for %s:\n%s' % (app_name, scale))
-        else:
-            print 'Current scale for %s is now:' % app_name
-            print self._format_scale(self._deployed_scale(app_name))
 
     def _deis_get(self, endpoint):
         response = get(self._endpoint_url(endpoint), headers=self._auth_header)
