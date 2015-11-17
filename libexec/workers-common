@@ -1,4 +1,4 @@
-trap 'kill -TERM $PID; wait $PID' TERM INT
+trap 'kill -QUIT $PID; wait $PID' TERM INT
 
 USAGE="Usage: $0 DEPLOYMENT_CONFIG"
 DEPLOYMENT_CONFIG=${1?"$USAGE"}
