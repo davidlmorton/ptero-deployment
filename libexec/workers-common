@@ -1,4 +1,4 @@
-trap 'kill -QUIT $PID; wait $PID' TERM INT
+trap 'echo "Received signal TERM... sending QUIT to $PID"; kill -QUIT $PID; echo "Waiting on $PID to exit"; wait $PID' TERM
 
 USAGE="Usage: $0 DEPLOYMENT_CONFIG"
 DEPLOYMENT_CONFIG=${1?"$USAGE"}
